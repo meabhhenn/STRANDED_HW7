@@ -15,6 +15,21 @@ import {
   MONSTER_SPAWN_MIN_DISTANCE,
   MONSTER_WANDER_SPEED,
 } from '../config';
+import {
+  BOSS_ATTACK_COOLDOWN,
+  BOSS_ATTACK_DAMAGE,
+  BOSS_CAMPFIRE_FUEL_LOSS_PER_HIT,
+  BOSS_CHASE_SPEED,
+  BOSS_SCALE,
+  CAMPFIRE_ATTACK_COOLDOWN,
+  CAMPFIRE_ATTACK_RANGE,
+  CAMPFIRE_FUEL_LOSS_PER_HIT,
+  DIFFICULTY_DAMAGE_PER_TIER,
+  DIFFICULTY_EXTRA_MONSTERS_PER_TIER,
+  DIFFICULTY_HP_PER_TIER,
+  RAID_EXTRA_MONSTERS,
+  RAID_SPAWN_INTERVAL,
+} from '../config';
 import type { PlayerStats } from '../player/Stats';
 import type { ColliderGrid } from '../world/Colliders';
 import { MONSTERS, createMonsterModel, type MonsterKind } from './monsterKinds';
@@ -29,9 +44,15 @@ export interface MonsterHost {
   isSafe(x: number, z: number): boolean;
   /** True only during the in-game night; monsters only spawn then. */
   isNight(): boolean;
+  /** World position of the campfire (raid target). */
+  firePos(): { x: number; z: number };
+  /** Apply monster damage to the campfire (drains fuel). */
+  damageCampfire(fuelLoss: number): void;
+  /** Current difficulty tier (0+). Scales monster count/HP/damage (SPEC rule 2). */
+  difficultyTier(): number;
 }
 
-type MonsterState = 'wander' | 'chase' | 'retreat' | 'dead';
+type MonsterState = 'wander' | 'chase' | 'retreat' | 'dead' | 'raid';
 
 export interface Monster {
   kind: MonsterKind;
@@ -53,6 +74,18 @@ export interface Monster {
   swingPhase: number;
   swingAmp: number;
   visualYaw: number;
+  /** What this monster is going for: the player (default) or the campfire (raids). */
+  target?: 'player' | 'fire';
+  /** True for the blood-moon boss. */
+  isBoss?: boolean;
+  /** Per-monster attack damage (set at spawn so difficulty/boss scaling applies). */
+  damage?: number;
+  /** Per-monster chase speed (boss is slower than a stalker). */
+  chaseSpeed?: number;
+  /** Fuel the campfire loses when this monster hits it. */
+  fireFuelLoss?: number;
+  /** Base model scale (1 for stalkers, larger for the boss). Composed with hit-squash. */
+  baseScale?: number;
 }
 
 const rand = (min: number, max: number): number => min + Math.random() * (max - min);
@@ -69,9 +102,35 @@ export class Monsters {
   readonly group = new THREE.Group();
   readonly monsters: Monster[] = [];
   private spawnTimer = 0;
+  /** This night's mode (set by Game via setNightMode). Raids target the fire. */
+  private raidActive = false;
+  /** A boss should be spawned once this night (blood moon). */
+  private bossPending = false;
 
   constructor(private readonly host: MonsterHost) {
     this.group.name = 'monsters';
+  }
+
+  /**
+   * Configure tonight's attack. Call at dusk/night start (SPEC rule 2):
+   *  - raid: monsters also target the campfire and spawn faster/in greater numbers.
+   *  - bloodMoon: additionally queue one boss that heads for the fire.
+   * Safe to call repeatedly; the boss only spawns once per queued flag.
+   */
+  setNightMode(raid: boolean, bloodMoon: boolean): void {
+    this.raidActive = raid || bloodMoon;
+    if (bloodMoon) this.bossPending = true;
+  }
+
+  /** Clear tonight's raid/boss state (call at dawn). */
+  clearNightMode(): void {
+    this.raidActive = false;
+    this.bossPending = false;
+  }
+
+  /** True if the blood-moon boss is currently alive. */
+  get bossAlive(): boolean {
+    return this.monsters.some((m) => m.isBoss && m.state !== 'dead');
   }
 
   /** Living monsters currently in the world. */
@@ -139,6 +198,15 @@ export class Monsters {
 
   private think(m: Monster, dt: number, px: number, pz: number, stats: PlayerStats): void {
     m.attackCooldown = Math.max(0, m.attackCooldown - dt);
+
+    // Raid monsters head for the campfire instead of the player. They can only
+    // reach it once the safe zone is down (fire out); otherwise they wait at
+    // the edge. If the player steps into attack range they lash out en route.
+    if (m.target === 'fire') {
+      this.thinkFireTarget(m, dt, px, pz, stats);
+      return;
+    }
+
     const dx = px - m.x;
     const dz = pz - m.z;
     const toPlayer = Math.hypot(dx, dz);
@@ -153,10 +221,10 @@ export class Monsters {
       m.state = 'chase';
       m.yaw = Math.atan2(-dx, -dz);
       if (toPlayer > MONSTER_ATTACK_RANGE) {
-        this.step(m, MONSTER_CHASE_SPEED, dt);
+        this.step(m, m.chaseSpeed ?? MONSTER_CHASE_SPEED, dt);
       } else if (m.attackCooldown <= 0) {
-        stats.damage(MONSTER_ATTACK_DAMAGE, 'monster');
-        m.attackCooldown = MONSTER_ATTACK_COOLDOWN;
+        stats.damage(m.damage ?? MONSTER_ATTACK_DAMAGE, 'monster');
+        m.attackCooldown = m.kind === 'boss' ? BOSS_ATTACK_COOLDOWN : MONSTER_ATTACK_COOLDOWN;
       }
     } else {
       // Idle wander: pick a new heading now and then and shuffle forward.
@@ -173,6 +241,43 @@ export class Monsters {
     const moving = fast || m.state === 'wander';
     m.swingAmp += ((moving ? (fast ? 0.9 : 0.5) : 0) - m.swingAmp) * Math.min(1, dt * 8);
     m.swingPhase += dt * (fast ? 16 : 8);
+  }
+
+  /** Raid behaviour: march on the campfire; attack it once the safe zone is down. */
+  private thinkFireTarget(m: Monster, dt: number, px: number, pz: number, stats: PlayerStats): void {
+    const fire = this.host.firePos();
+    const speed = m.chaseSpeed ?? MONSTER_CHASE_SPEED;
+
+    // Opportunistic swipe at the player if they get right next to us.
+    const pdx = px - m.x;
+    const pdz = pz - m.z;
+    if (Math.hypot(pdx, pdz) <= MONSTER_ATTACK_RANGE && !this.host.isSafe(px, pz) && m.attackCooldown <= 0) {
+      stats.damage(m.damage ?? MONSTER_ATTACK_DAMAGE, 'monster');
+      m.attackCooldown = m.kind === 'boss' ? BOSS_ATTACK_COOLDOWN : MONSTER_ATTACK_COOLDOWN;
+    }
+
+    const fdx = fire.x - m.x;
+    const fdz = fire.z - m.z;
+    const toFire = Math.hypot(fdx, fdz);
+    m.state = 'raid';
+    m.yaw = Math.atan2(-fdx, -fdz);
+
+    if (toFire <= CAMPFIRE_ATTACK_RANGE) {
+      // At the fire: hit it only if the safe zone is down (fire out). Otherwise hold.
+      if (!this.host.isSafe(m.x, m.z) && m.attackCooldown <= 0) {
+        this.host.damageCampfire(m.fireFuelLoss ?? CAMPFIRE_FUEL_LOSS_PER_HIT);
+        m.attackCooldown = m.kind === 'boss' ? BOSS_ATTACK_COOLDOWN : CAMPFIRE_ATTACK_COOLDOWN;
+      }
+    } else if (this.host.isSafe(m.x, m.z)) {
+      // Pushed inside an active safe zone: step back out to the edge.
+      m.yaw = Math.atan2(m.x, m.z);
+      this.step(m, MONSTER_RETREAT_SPEED, dt);
+    } else {
+      this.step(m, speed, dt);
+    }
+
+    m.swingAmp += (0.9 - m.swingAmp) * Math.min(1, dt * 8);
+    m.swingPhase += dt * 16;
   }
 
   /** Walk forward (negative speed = step backward); returns false if blocked. */
@@ -197,24 +302,65 @@ export class Monsters {
     m.group.rotation.y = m.visualYaw;
     const swing = Math.sin(m.swingPhase) * m.swingAmp;
     m.legs.forEach((leg, i) => (leg.rotation.x = i < 1 ? swing : -swing));
-    // Squash when hit.
+    // Squash when hit, composed with the model's base scale (boss is larger).
     const squash = m.hurt > 0 ? 1 - 0.2 * (m.hurt / MONSTER_HURT_TIME) : 1;
-    m.group.scale.set(1 + (1 - squash) * 0.5, squash, 1 + (1 - squash) * 0.5);
+    const base = m.baseScale ?? 1;
+    m.group.scale.set(base * (1 + (1 - squash) * 0.5), base * squash, base * (1 + (1 - squash) * 0.5));
   }
 
   // ---- spawning ----
 
   private updateSpawns(dt: number, px: number, pz: number): void {
-    // Only spawn during the night and while below the cap.
-    if (!this.host.isNight() || this.aliveCount >= MONSTER_MAX_ALIVE) {
+    if (!this.host.isNight()) {
       this.spawnTimer = 0;
+      return;
+    }
+    // Blood moon: bring out the boss first, aimed at the campfire.
+    if (this.bossPending && !this.bossAlive) {
+      const spot = this.findSpawnSpot(px, pz);
+      if (spot) {
+        this.spawnMonster('boss', spot.x, spot.z, 'fire');
+        this.bossPending = false;
+      }
+    }
+    // Difficulty + raid raise the simultaneous-monster cap.
+    const tier = this.host.difficultyTier();
+    let cap = MONSTER_MAX_ALIVE + tier * DIFFICULTY_EXTRA_MONSTERS_PER_TIER;
+    if (this.raidActive) cap += RAID_EXTRA_MONSTERS;
+    if (this.aliveCount >= cap) {
+      this.spawnTimer = Math.min(this.spawnTimer, MONSTER_SPAWN_INTERVAL);
       return;
     }
     this.spawnTimer -= dt;
     if (this.spawnTimer > 0) return;
-    this.spawnTimer = MONSTER_SPAWN_INTERVAL;
+    this.spawnTimer = this.raidActive ? RAID_SPAWN_INTERVAL : MONSTER_SPAWN_INTERVAL;
     const spot = this.findSpawnSpot(px, pz);
-    if (spot) this.spawn('stalker', spot.x, spot.z);
+    // On raid nights most of the horde marches on the fire; otherwise they hunt the player.
+    if (spot) this.spawnMonster('stalker', spot.x, spot.z, this.raidActive ? 'fire' : 'player');
+  }
+
+  /**
+   * Spawn a monster with a given target, applying difficulty scaling to HP and
+   * damage (SPEC rule 2). Wraps the base spawn() and sets the extra per-monster
+   * fields. Bosses use their own (much higher) stats.
+   */
+  private spawnMonster(kind: MonsterKind, x: number, z: number, target: 'player' | 'fire'): Monster {
+    const m = this.spawn(kind, x, z);
+    m.target = target;
+    const tier = this.host.difficultyTier();
+    if (kind === 'boss') {
+      m.isBoss = true;
+      m.baseScale = BOSS_SCALE;
+      m.hp = MONSTERS.boss.hp * (1 + tier * DIFFICULTY_HP_PER_TIER);
+      m.damage = BOSS_ATTACK_DAMAGE * (1 + tier * DIFFICULTY_DAMAGE_PER_TIER);
+      m.chaseSpeed = BOSS_CHASE_SPEED;
+      m.fireFuelLoss = BOSS_CAMPFIRE_FUEL_LOSS_PER_HIT;
+    } else {
+      m.hp = MONSTERS[kind].hp * (1 + tier * DIFFICULTY_HP_PER_TIER);
+      m.damage = MONSTER_ATTACK_DAMAGE * (1 + tier * DIFFICULTY_DAMAGE_PER_TIER);
+      m.fireFuelLoss = CAMPFIRE_FUEL_LOSS_PER_HIT;
+    }
+    return m;
   }
 
   /** A walkable, dry point a ring away from the player and outside the safe zone. */

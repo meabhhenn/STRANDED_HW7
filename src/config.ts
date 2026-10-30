@@ -236,3 +236,48 @@ export const CRAFT_COSTS = {
  * next day (day WIN_NIGHT + 1), i.e. after surviving night WIN_NIGHT.
  */
 export const WIN_NIGHT = 50;
+
+// ---- Night raids, difficulty & blood moon (SPEC rule 2) -------------------
+/**
+ * Raids happen every other night. Night N is a raid night when
+ * N % RAID_EVERY_N_NIGHTS === 0 (N = day number at the start of that night).
+ * On a raid night monsters target the campfire, not just the player.
+ */
+export const RAID_EVERY_N_NIGHTS = 2;
+/** Every 10th night is a blood moon (overrides a plain raid and spawns a boss). */
+export const BLOOD_MOON_EVERY_N_NIGHTS = 10;
+
+/** Difficulty increases one "tier" every this many days. Tier = floor((day-1)/this). */
+export const DIFFICULTY_EVERY_N_DAYS = 3;
+/** Extra simultaneous monsters allowed per difficulty tier (added to MONSTER_MAX_ALIVE). */
+export const DIFFICULTY_EXTRA_MONSTERS_PER_TIER = 2;
+/** Monster HP multiplier added per difficulty tier (tier 2 => x1.5 at 0.25). */
+export const DIFFICULTY_HP_PER_TIER = 0.25;
+/** Monster damage multiplier added per difficulty tier. */
+export const DIFFICULTY_DAMAGE_PER_TIER = 0.2;
+/** Upper bound on difficulty tier so late-game stays playable. */
+export const DIFFICULTY_MAX_TIER = 12;
+
+/** Faster spawn cadence during a raid night (seconds between spawn attempts). */
+export const RAID_SPAWN_INTERVAL = 3;
+/** Extra simultaneous monsters allowed during a raid (on top of difficulty). */
+export const RAID_EXTRA_MONSTERS = 3;
+
+// ---- Campfire under attack ------------------------------------------------
+/** Centre-to-centre distance at which a monster can hit the campfire. */
+export const CAMPFIRE_ATTACK_RANGE = 1.8;
+/** Fuel (seconds) the campfire loses per monster hit. */
+export const CAMPFIRE_FUEL_LOSS_PER_HIT = 20;
+/** Seconds between a monster's hits on the campfire. */
+export const CAMPFIRE_ATTACK_COOLDOWN = 1.2;
+
+// ---- Blood moon boss (a scaled-up stalker) --------------------------------
+export const BOSS_HP = 120;
+export const BOSS_RADIUS = 1.4;
+/** Visual/▲ scale of the boss model relative to a normal stalker. */
+export const BOSS_SCALE = 2.6;
+export const BOSS_CHASE_SPEED = 2.2;
+export const BOSS_ATTACK_DAMAGE = 22;
+export const BOSS_ATTACK_COOLDOWN = 1.6;
+/** Fuel (seconds) the campfire loses per boss hit (bosses wreck the fire). */
+export const BOSS_CAMPFIRE_FUEL_LOSS_PER_HIT = 60;

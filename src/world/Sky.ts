@@ -65,5 +65,7 @@ export class Sky {
     this.moon.position.copy(dir).multiplyScalar(-380);
     this.sun.visible = dir.y > -0.12;
     this.moon.visible = dir.y < 0.12;
+    // Blood moon: tint the moon deep red (SPEC rule 2). Otherwise its pale colour.
+    (this.moon.material as THREE.MeshBasicMaterial).color.set(dayNight.bloodMoon ? 0xc01818 : 0xdfe6f5);
   }
 }

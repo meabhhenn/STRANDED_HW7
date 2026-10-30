@@ -55,6 +55,9 @@ export class Campfire {
   onLowFuel?: () => void;
   /** Called when a batch finishes cooking, with the number of pieces. */
   onCooked?: (count: number) => void;
+  /** Called each time a monster hits the campfire (SPEC rule 2 raids). */
+  onAttacked?: () => void;
+  private underAttackTimer = 0;
   private lowFuelWarned = false;
   private readonly cooking: { count: number; timer: number; mesh: THREE.Object3D }[] = [];
 
@@ -162,8 +165,32 @@ export class Campfire {
     return true;
   }
 
+  /**
+   * A monster hit the campfire (SPEC rule 2: raids damage the fire). Drains
+   * `fuelLoss` seconds of fuel; if that empties it, the normal burn-out path
+   * takes over on the next update. Sets `underAttack` briefly for feedback.
+   * Fires `onAttacked` once per hit. Returns the fuel remaining.
+   */
+  damage(fuelLoss: number): number {
+    this.fuel = Math.max(0, this.fuel - Math.max(0, fuelLoss));
+    this.underAttackTimer = 0.6;
+    if (this.fuel <= 0 && this.lit) {
+      this.lit = false;
+      this.outSeconds = 0;
+      this.onExtinguished?.();
+    }
+    this.onAttacked?.();
+    return this.fuel;
+  }
+
+  /** True for a short moment after the fire is hit (for flashing/feedback). */
+  get underAttack(): boolean {
+    return this.underAttackTimer > 0;
+  }
+
   update(dt: number): void {
     this.time += dt;
+    if (this.underAttackTimer > 0) this.underAttackTimer = Math.max(0, this.underAttackTimer - dt);
     this.burn(dt);
     this.cookTick(dt);
     this.flame.visible = this.lit;

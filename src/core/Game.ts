@@ -1,5 +1,11 @@
 import * as THREE from 'three';
-import { CAMPFIRE_GROUND_HEIGHT, CAMPFIRE_OUT_GRACE_SECONDS, WIN_NIGHT } from '../config';
+import {
+  BLOOD_MOON_EVERY_N_NIGHTS,
+  CAMPFIRE_GROUND_HEIGHT,
+  CAMPFIRE_OUT_GRACE_SECONDS,
+  RAID_EVERY_N_NIGHTS,
+  WIN_NIGHT,
+} from '../config';
 import { Inventory } from '../inventory/Inventory';
 import { Interaction } from '../player/Interaction';
 import { Player } from '../player/Player';
@@ -53,6 +59,8 @@ export class Game {
   private inventory!: Inventory;
   private stats!: PlayerStats;
   private interaction!: Interaction;
+  /** Tracks night edges so a raid/blood-moon is announced once per night (SPEC rule 2). */
+  private wasNight = false;
 
   constructor(container: HTMLElement) {
     this.renderer = new PixelRenderer(container);
@@ -110,7 +118,9 @@ export class Game {
     fire.onLowFuel = () => this.hud.toast('The campfire is running low. Add logs!', 4000);
     fire.onExtinguished = () => this.hud.toast('The campfire went out! Relight it within 10 seconds.', 6000);
     fire.onSafeZoneLost = () => this.hud.toast('The safe zone is gone. Add a log to relight the fire!', 6000);
+    fire.onAttacked = () => this.hud.toast('The campfire is under attack!', 2000);
     this.stats.onDeath = (cause) => this.onDeath(cause);
+    this.wasNight = false; // recompute the night mode fresh for the new run
 
     // Dev console handle: __stranded.stats.damage(30), .inventory.add('log', 50), etc.
     if (import.meta.env.DEV) {
@@ -170,6 +180,31 @@ export class Game {
     this.hud.setPrompt(null);
     this.updateHudInfo(); // final health/hunger values behind the game-over box
     this.gameOver.show(run, history.bestStreak, newBest);
+  }
+
+  /**
+   * SPEC rule 2: at nightfall decide whether tonight is a plain night, a raid
+   * (every RAID_EVERY_N_NIGHTS), or a blood moon (every BLOOD_MOON_EVERY_N_NIGHTS,
+   * which spawns the boss). Announced once per night via a toast; cleared at dawn.
+   */
+  private updateNightMode(): void {
+    const { dayNight, monsters } = this.world;
+    const night = dayNight.isNight;
+    if (night && !this.wasNight) {
+      // Night just began. The "night N" is keyed off the current day number.
+      const n = dayNight.day;
+      const bloodMoon = n % BLOOD_MOON_EVERY_N_NIGHTS === 0;
+      const raid = bloodMoon || n % RAID_EVERY_N_NIGHTS === 0;
+      dayNight.bloodMoon = bloodMoon;
+      monsters.setNightMode(raid, bloodMoon);
+      if (bloodMoon) this.hud.toast('BLOOD MOON! A beast is coming for your campfire.', 6000);
+      else if (raid) this.hud.toast('A raid tonight! Monsters will swarm the campfire.', 5000);
+    } else if (!night && this.wasNight) {
+      // Dawn: the night's threat is over.
+      dayNight.bloodMoon = false;
+      monsters.clearNightMode();
+    }
+    this.wasNight = night;
   }
 
   /**
@@ -288,6 +323,7 @@ export class Game {
       this.world.update(dt, this.player.position);
       this.updateHudInfo();
       this.hud.setCrosshair(this.player.isFirstPerson);
+      this.updateNightMode();
       this.checkWin();
     }
     this.input.endFrame();

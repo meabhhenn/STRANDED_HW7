@@ -5,6 +5,8 @@ import { smoothstep } from './noise';
 const NIGHT_SKY = new THREE.Color(0x05070f);
 const DUSK_SKY = new THREE.Color(0xe8955a);
 const DAY_SKY = new THREE.Color(0x8fd0ff);
+/** Target tint for blood-moon nights (SPEC rule 2). */
+const BLOOD_MOON_SKY = new THREE.Color(0x5a0a0a);
 
 /**
  * Drives sun, sky/fog colour and ambient light from an in-game clock.
@@ -48,6 +50,24 @@ export class DayNight {
 
   get isNight(): boolean {
     return this.sunElevation < 0.05;
+  }
+
+  /** True during a blood-moon night; drives the red sky/fog tint (SPEC rule 2). */
+  bloodMoon = false;
+
+  /**
+   * Blend the current sky and fog toward blood red. Call after `update()` each
+   * frame while `bloodMoon` is set; strongest at night and fading out by day.
+   * Additive on top of the normal day/night colours (does not touch apply()).
+   */
+  applyBloodMoonTint(): void {
+    if (!this.bloodMoon) return;
+    const strength = 0.75 * (1 - this.daylight); // vivid at night, gone by midday
+    if (strength <= 0) return;
+    this.sky.lerp(BLOOD_MOON_SKY, strength);
+    (this.scene.fog as THREE.Fog).color.copy(this.sky);
+    // Dim the moonlight a touch and push it reddish.
+    this.hemi.color.lerp(BLOOD_MOON_SKY, strength * 0.5);
   }
 
   setHour(hour: number): void {

@@ -6,6 +6,8 @@ import {
   CRAFT_TABLE_REACH,
   CRAFT_TABLE_X,
   CRAFT_TABLE_Z,
+  DIFFICULTY_EVERY_N_DAYS,
+  DIFFICULTY_MAX_TIER,
   DESERT_UNLOCK_LEVEL,
   ISLAND_RADIUS,
   MIN_WALK_HEIGHT,
@@ -98,6 +100,22 @@ export class World {
     return this.dayNight.isNight;
   }
 
+  /** World position of the campfire (raid target for monsters). */
+  firePos(): { x: number; z: number } {
+    const p = this.campfire.group.position;
+    return { x: p.x, z: p.z };
+  }
+
+  /** Apply monster damage to the campfire (drains fuel). */
+  damageCampfire(fuelLoss: number): void {
+    this.campfire.damage(fuelLoss);
+  }
+
+  /** Difficulty tier (0+) from the current day, capped (SPEC rule 2). */
+  difficultyTier(): number {
+    return Math.min(DIFFICULTY_MAX_TIER, Math.floor((this.dayNight.day - 1) / DIFFICULTY_EVERY_N_DAYS));
+  }
+
   /** Pixel water texture, tiled every 8 m across the ocean plane. */
   private waterTexture() {
     const t = textures.water();
@@ -155,6 +173,7 @@ export class World {
   update(dt: number, focus: THREE.Vector3): void {
     this.dayNight.update(dt);
     this.dayNight.follow(focus);
+    this.dayNight.applyBloodMoonTint(); // red tint on blood-moon nights (SPEC rule 2)
     this.sky.update(dt, focus, this.dayNight);
     textures.water().offset.x = (textures.water().offset.x + dt * 0.004) % 1; // slow drifting waves
     this.campfire.update(dt);

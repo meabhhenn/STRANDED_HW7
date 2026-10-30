@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { blobShadow, toon } from '../render/materials';
-import { MONSTER_HP, MONSTER_RADIUS } from '../config';
+import { BOSS_HP, BOSS_RADIUS, MONSTER_HP, MONSTER_RADIUS } from '../config';
 
-export type MonsterKind = 'stalker';
+export type MonsterKind = 'stalker' | 'boss';
 
 /** Static stats for each monster. Tweak balance in config.ts, not here. */
 export interface MonsterDef {
@@ -17,6 +17,12 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
     name: 'stalker',
     hp: MONSTER_HP,
     radius: MONSTER_RADIUS,
+  },
+  // Blood-moon boss: a much larger, tougher stalker (SPEC rule 2).
+  boss: {
+    name: 'blood moon beast',
+    hp: BOSS_HP,
+    radius: BOSS_RADIUS,
   },
 };
 
@@ -84,9 +90,30 @@ function buildStalker(): MonsterModel {
   return { group: g, legs };
 }
 
+/**
+ * Blood-moon boss: the same stalker silhouette, scaled up and tinted with an
+ * angry red glow so it reads as the night's big threat. Reuses buildStalker so
+ * it stays in sync with the base model.
+ */
+function buildBoss(): MonsterModel {
+  const base = buildStalker();
+  // Overall size is applied by the animator via Monster.baseScale (so the
+  // hit-squash animation composes with it); here we only add the red aura.
+  // Red aura: a large translucent shell around the body.
+  const aura = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(1.1, 1),
+    new THREE.MeshBasicMaterial({ color: 0xff1a1a, transparent: true, opacity: 0.16, fog: false }),
+  );
+  aura.position.y = 1.1;
+  base.group.add(aura);
+  return base;
+}
+
 export function createMonsterModel(kind: MonsterKind): MonsterModel {
   switch (kind) {
     case 'stalker':
       return buildStalker();
+    case 'boss':
+      return buildBoss();
   }
 }
