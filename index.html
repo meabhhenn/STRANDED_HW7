@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>STRANDED</title>
+    <link rel="icon" href="data:," />
+    <style>
+      /* Pixel-art UI: bitmap font (bundled), hard edges, no blur, chunky offset shadows. */
+      :root {
+        --ink: #2b1d14;
+        --paper: #f6e7c1;
+        --panel: #3a2a1d;
+        --gold: #ffd34d;
+        --red: #d9423e;
+        --orange: #f09a2a;
+      }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: 'Press Start 2P', monospace; color: #fff; }
+      #game { position: fixed; inset: 0; }
+      .hidden { display: none !important; }
+      #crosshair { position: fixed; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; background: #fff; border: 2px solid var(--ink); box-sizing: border-box; pointer-events: none; }
+
+      /* ---- HUD ---- */
+      #hud-info { position: fixed; top: 12px; left: 12px; font-size: 10px; line-height: 1.5; text-shadow: 2px 2px 0 var(--ink); pointer-events: none; }
+      #bars { position: fixed; top: 52px; left: 12px; width: 230px; pointer-events: none; }
+      .bar { position: relative; height: 20px; margin-bottom: 8px; background: var(--ink); border: 3px solid var(--ink); box-shadow: 0 0 0 2px #fff3d6; box-sizing: border-box; overflow: hidden; }
+      .bar .fill { height: 100%; transition: width 0.12s steps(4); }
+      .bar .label { position: absolute; inset: 0; text-align: center; font-size: 8px; line-height: 14px; text-shadow: 1px 1px 0 var(--ink); }
+      #health-fill { background: var(--red); box-shadow: inset 0 -4px 0 #a82a2a; }
+      #hunger-fill { background: var(--orange); box-shadow: inset 0 -4px 0 #c47414; }
+      #hunger-fill.starving { background: #8a5a1a; }
+      #prompt, #toast { position: fixed; left: 50%; transform: translateX(-50%); padding: 8px 12px; background: var(--ink); border: 3px solid #fff3d6; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); pointer-events: none; font-size: 9px; line-height: 1.5; text-align: center; max-width: 80vw; }
+      #prompt { top: 60%; }
+      #toast { top: 14%; }
+      #hotbar { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: none; }
+      .slot { position: relative; width: 62px; height: 62px; box-sizing: border-box; background: var(--panel); border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #5b4430, 3px 3px 0 rgba(0,0,0,0.45); font-size: 7px; display: flex; align-items: center; justify-content: center; }
+      .slot.selected { border-color: var(--gold); box-shadow: inset 0 0 0 2px #8a6a1f, 0 0 0 2px var(--ink), 3px 3px 0 rgba(0,0,0,0.45); background: #5a4222; }
+      .slot .key { position: absolute; top: 3px; left: 4px; opacity: 0.75; }
+      .slot .icon { width: 36px; height: 36px; image-rendering: pixelated; }
+      .slot .count { position: absolute; bottom: 3px; right: 4px; font-size: 8px; text-shadow: 1px 1px 0 var(--ink); }
+
+      /* ---- Menus ---- */
+      #overlay, #gameover { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; }
+      #overlay { background: rgba(10, 8, 6, 0.65); cursor: pointer; }
+      #gameover { background: rgba(50, 0, 0, 0.75); }
+      #panel, #gameover .box { background: var(--panel); color: var(--paper); border: 4px solid var(--ink); box-shadow: 0 0 0 3px #fff3d6, 8px 8px 0 rgba(0,0,0,0.5); padding: 20px 24px; box-sizing: border-box; cursor: default; }
+      #panel { width: min(560px, 94vw); max-height: 94vh; overflow-y: auto; }
+      #gameover .box { width: min(460px, 94vw); }
+      h1 { margin: 0 0 10px; font-size: 22px; letter-spacing: 4px; color: var(--gold); text-shadow: 3px 3px 0 var(--ink); }
+      #gameover h1 { color: #ff6b5e; }
+      p { margin: 8px 0; font-size: 9px; line-height: 1.6; }
+      #best-streak, #go-best { color: var(--gold); min-height: 1.2em; }
+      table { margin: 0 auto 14px; text-align: left; border-collapse: collapse; font-size: 8px; line-height: 1.7; }
+      td { padding: 2px 8px; }
+      td:first-child { color: var(--gold); white-space: nowrap; }
+      label { display: block; margin-bottom: 12px; font-size: 8px; line-height: 1.8; }
+      input[type='range'] { width: 70%; accent-color: var(--gold); }
+      input[type='checkbox'] { accent-color: var(--gold); width: 14px; height: 14px; vertical-align: middle; }
+      #history-list { margin: 0 0 14px; padding-left: 24px; text-align: left; font-size: 8px; line-height: 1.8; max-height: 96px; overflow-y: auto; }
+      button { font-family: inherit; font-size: 11px; padding: 10px 16px; margin: 0 6px; cursor: pointer; color: var(--ink); background: var(--gold); border: 3px solid var(--ink); box-shadow: 0 5px 0 var(--ink); }
+      button:hover { background: #ffe58a; }
+      button:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="crosshair" class="hidden"></div>
+    <div id="hud-info"></div>
+    <div id="bars">
+      <div class="bar"><div class="fill" id="health-fill"></div><span class="label" id="health-label"></span></div>
+      <div class="bar"><div class="fill" id="hunger-fill"></div><span class="label" id="hunger-label"></span></div>
+    </div>
+    <div id="prompt" class="hidden"></div>
+    <div id="toast" class="hidden"></div>
+    <div id="hotbar"></div>
+    <div id="overlay">
+      <div id="panel">
+        <h1>STRANDED</h1>
+        <p>Survive 50 nights.</p>
+        <p id="best-streak"></p>
+        <table>
+          <tr><td>W / UP, S / DOWN</td><td>Move forward / back</td></tr>
+          <tr><td>A / LEFT, D / RIGHT</td><td>Turn (or use the mouse)</td></tr>
+          <tr><td>Two-finger swipe</td><td>Look around (trackpad)</td></tr>
+          <tr><td>Pinch</td><td>Zoom camera (trackpad)</td></tr>
+          <tr><td>Shift</td><td>Sprint</td></tr>
+          <tr><td>Click (hold)</td><td>Chop / attack / add log to fire</td></tr>
+          <tr><td>E</td><td>Pick up</td></tr>
+          <tr><td>Q (Shift+Q)</td><td>Drop one (whole stack)</td></tr>
+          <tr><td>1-9, 0 or [ ]</td><td>Select inventory slot</td></tr>
+          <tr><td>Numpad + / -</td><td>Zoom in / out (also = and -)</td></tr>
+          <tr><td>Esc</td><td>Pause</td></tr>
+        </table>
+        <label>Mouse sensitivity<br />
+          <input id="sensitivity" type="range" min="0.2" max="3" step="0.1" />
+        </label>
+        <label>Trackpad swipe sensitivity<br />
+          <input id="trackpad-sensitivity" type="range" min="0.2" max="3" step="0.1" />
+        </label>
+        <label><input id="invert-trackpad" type="checkbox" /> Invert trackpad swipe direction</label>
+        <p>Game history</p>
+        <ol id="history-list"></ol>
+        <button id="resume" type="button">Click to play</button>
+      </div>
+    </div>
+    <div id="gameover" class="hidden">
+      <div class="box">
+        <h1>GAME OVER</h1>
+        <p id="go-cause"></p>
+        <p id="go-streak"></p>
+        <p id="go-best"></p>
+        <button id="go-restart" type="button">Restart</button>
+        <button id="go-save" type="button">Save progress</button>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

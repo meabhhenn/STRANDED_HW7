@@ -1,0 +1,27 @@
+{
+  "name": "survival-game",
+  "version": "0.1.0",
+  "private": true,
+  "description": "STRANDED - a 3D island survival game (TypeScript + Three.js)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/izzyh-gif/Survival-Game.git"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@fontsource/press-start-2p": "5.3.0",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@types/three": "0.186.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
+  }
+}
