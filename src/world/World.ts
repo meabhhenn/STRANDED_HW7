@@ -3,6 +3,9 @@ import {
   BASE_UNLOCK_RADIUS,
   CAMPFIRE_GROUND_HEIGHT,
   CAMPFIRE_SAFE_RADIUS,
+  CRAFT_TABLE_REACH,
+  CRAFT_TABLE_X,
+  CRAFT_TABLE_Z,
   DESERT_UNLOCK_LEVEL,
   ISLAND_RADIUS,
   MIN_WALK_HEIGHT,
@@ -11,10 +14,13 @@ import {
   WATER_LEVEL,
 } from '../config';
 import { Livestock } from '../entities/Livestock';
+import { Monsters } from '../entities/Monsters';
+import type { PlayerStats } from '../player/Stats';
 import { toon } from '../render/materials';
 import { textures } from '../render/textures';
 import { Sky } from './Sky';
 import { Campfire } from './Campfire';
+import { CraftingTable } from './CraftingTable';
 import { ColliderGrid } from './Colliders';
 import { DayNight } from './DayNight';
 import { DroppedItems } from './DroppedItems';
@@ -32,10 +38,14 @@ export class World {
   readonly terrain = new Terrain();
   readonly colliders = new ColliderGrid();
   readonly campfire: Campfire;
+  readonly craftingTable: CraftingTable;
   readonly forest: Forest;
   readonly dayNight: DayNight;
   readonly drops: DroppedItems;
   readonly livestock: Livestock;
+  readonly monsters: Monsters;
+  /** Set by Game so night monsters can damage the player. */
+  stats: PlayerStats | null = null;
   private readonly sky: Sky;
 
   constructor() {
@@ -55,6 +65,11 @@ export class World {
     this.colliders.add(0, 0, this.campfire.collisionRadius);
     this.scene.add(this.campfire.group);
 
+    // Crafting table on the flat ground beside the fire (SPEC feature 7).
+    this.craftingTable = new CraftingTable(CRAFT_TABLE_X, CAMPFIRE_GROUND_HEIGHT, CRAFT_TABLE_Z);
+    this.colliders.add(CRAFT_TABLE_X, CRAFT_TABLE_Z, this.craftingTable.collisionRadius);
+    this.scene.add(this.craftingTable.group);
+
     this.forest = new Forest(this.terrain, this.colliders);
     this.scene.add(this.forest.group);
 
@@ -73,6 +88,14 @@ export class World {
 
     this.livestock = new Livestock(this);
     this.scene.add(this.livestock.group);
+
+    this.monsters = new Monsters(this);
+    this.scene.add(this.monsters.group);
+  }
+
+  /** True only during the in-game night (hook for night monster spawns). */
+  isNight(): boolean {
+    return this.dayNight.isNight;
   }
 
   /** Pixel water texture, tiled every 8 m across the ocean plane. */
@@ -123,6 +146,12 @@ export class World {
     return this.campfire.safeZoneActive && Math.hypot(x, z) <= CAMPFIRE_SAFE_RADIUS;
   }
 
+  /** True if (x, z) is close enough to the crafting table to open the crafting menu. */
+  nearCraftingTable(x: number, z: number): boolean {
+    const p = this.craftingTable.group.position;
+    return Math.hypot(x - p.x, z - p.z) <= CRAFT_TABLE_REACH;
+  }
+
   update(dt: number, focus: THREE.Vector3): void {
     this.dayNight.update(dt);
     this.dayNight.follow(focus);
@@ -131,5 +160,6 @@ export class World {
     this.campfire.update(dt);
     this.forest.update(dt, focus.x, focus.z);
     this.livestock.update(dt, focus.x, focus.z);
+    if (this.stats) this.monsters.update(dt, focus.x, focus.z, this.stats);
   }
 }

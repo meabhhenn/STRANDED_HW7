@@ -25,6 +25,9 @@ const PALETTE: Record<string, string> = {
   e: '#ffffff', // feather
   E: '#c9d6e2', // feather shade
   g: '#9aa0a6', // grey
+  s: '#8b9096', // stone
+  S: '#cfd4d8', // stone highlight / blade edge
+  t: '#f0e6cf', // pale carved wood tip
 };
 
 const ICONS: Record<ItemId, string[]> = {
@@ -69,6 +72,34 @@ const ICONS: Record<ItemId, string[]> = {
     '...kkkkkk...',
     '............',
     '............',
+  ],
+  wooden_spear: [
+    '..........kk',
+    '.........ktk',
+    '........kttk',
+    '.......kttk.',
+    '......kBBk..',
+    '.....kbbk...',
+    '....kbbk....',
+    '...kbbk.....',
+    '..kbbk......',
+    '.kbbk.......',
+    'kbk.........',
+    'kk..........',
+  ],
+  stone_axe: [
+    '......kkkk..',
+    '....kkSssSk.',
+    '...kSsssssk.',
+    '..kSsssssk..',
+    '..kSskkkk...',
+    '...kbk......',
+    '..kbk.......',
+    '..kbk.......',
+    '.kbk........',
+    '.kbk........',
+    'kbk.........',
+    'kk..........',
   ],
   cooked_meat: [], // derived from raw_meat below
   leather: [

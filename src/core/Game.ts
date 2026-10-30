@@ -4,6 +4,8 @@ import { Inventory } from '../inventory/Inventory';
 import { Interaction } from '../player/Interaction';
 import { Player } from '../player/Player';
 import { PlayerStats, type DamageSource } from '../player/Stats';
+import { Crafting } from '../ui/Crafting';
+import { craft, type Recipe } from '../inventory/recipes';
 import { GameOver } from '../ui/GameOver';
 import { Hud } from '../ui/Hud';
 import { PixelRenderer } from '../render/PixelRenderer';
@@ -19,8 +21,9 @@ import { Input } from './Input';
  *  - paused:   pointer lock lost / Esc (pause overlay)
  *  - gameover: player died (game-over screen)
  *  - home:     after "Save progress" on the game-over screen (start overlay, "New game")
+ *  - crafting: crafting menu open (sim paused, pointer unlocked, mouse usable)
  */
-type State = 'menu' | 'playing' | 'paused' | 'gameover' | 'home';
+type State = 'menu' | 'playing' | 'paused' | 'gameover' | 'home' | 'crafting';
 
 /**
  * Top-level orchestrator: renderer, main loop, run lifecycle.
@@ -36,6 +39,7 @@ export class Game {
   private readonly input: Input;
   private readonly overlay: Overlay;
   private readonly gameOver: GameOver;
+  private readonly crafting: Crafting;
   private readonly hud = new Hud();
   private readonly clock = new THREE.Clock();
   private state: State = 'menu';
@@ -56,12 +60,15 @@ export class Game {
       () => this.restart(),
       () => this.saveAndGoHome(),
     );
+    this.crafting = new Crafting((recipe) => this.tryCraft(recipe));
     this.newRun();
     this.overlay.show('Click to play');
 
     document.addEventListener('pointerlockchange', () => {
       if (document.pointerLockElement !== this.renderer.domElement && this.state === 'playing') this.pause();
     });
+    // C opens/closes the crafting menu (near the table); Esc also closes it.
+    window.addEventListener('keydown', (e) => this.onCraftKey(e));
     window.addEventListener('resize', () => {
       this.renderer.resize();
       this.player.resize(window.innerWidth / window.innerHeight);
@@ -81,6 +88,7 @@ export class Game {
     this.world = new World();
     this.inventory = new Inventory();
     this.stats = new PlayerStats();
+    this.world.stats = this.stats; // lets night monsters damage the player
     // Spawn just south of the fire, looking at it (camera looks down -Z at yaw 0).
     this.player = new Player(
       window.innerWidth / window.innerHeight,
@@ -164,6 +172,43 @@ export class Game {
     this.gameOver.hide();
     this.state = 'home';
     this.overlay.show('New game');
+  }
+
+  // ---- crafting ----
+
+  /** C toggles the crafting menu (open only near the table); Esc closes it. */
+  private onCraftKey(e: KeyboardEvent): void {
+    if (e.code === 'KeyC') {
+      if (this.state === 'crafting') this.closeCrafting();
+      else if (this.state === 'playing' && this.world.nearCraftingTable(this.player.position.x, this.player.position.z)) {
+        this.openCrafting();
+      }
+    } else if (e.code === 'Escape' && this.state === 'crafting') {
+      this.closeCrafting();
+    }
+  }
+
+  private openCrafting(): void {
+    this.state = 'crafting';
+    this.input.clear();
+    if (document.pointerLockElement) document.exitPointerLock(); // free the cursor for the menu
+    this.hud.setPrompt(null);
+    this.crafting.show(this.inventory);
+  }
+
+  private closeCrafting(): void {
+    if (!this.crafting.isOpen) return;
+    this.crafting.hide();
+    // Return to the pause overlay; the player clicks to re-lock and resume.
+    this.state = 'paused';
+    this.overlay.show('Click to resume');
+  }
+
+  /** Perform a craft from the menu; returns whether it succeeded (so the UI can refresh). */
+  private tryCraft(recipe: Recipe): boolean {
+    const ok = craft(recipe, this.inventory);
+    this.hud.toast(ok ? `Crafted ${recipe.output.replace('_', ' ')}` : 'Not enough materials', 2500);
+    return ok;
   }
 
   // ---- per-frame ----

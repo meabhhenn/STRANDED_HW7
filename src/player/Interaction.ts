@@ -21,6 +21,8 @@ import { Inventory } from '../inventory/Inventory';
 import { ITEMS } from '../inventory/Item';
 import { ANIMALS } from '../entities/animals';
 import type { Animal } from '../entities/Livestock';
+import { MONSTERS } from '../entities/monsterKinds';
+import type { Monster } from '../entities/Monsters';
 import type { Hud } from '../ui/Hud';
 import type { PlayerStats } from './Stats';
 import type { Pile } from '../world/DroppedItems';
@@ -39,6 +41,7 @@ type ClickTarget =
   | { kind: 'campfire' }
   | { kind: 'tree'; tree: Tree }
   | { kind: 'animal'; animal: Animal }
+  | { kind: 'monster'; monster: Monster }
   | null;
 
 const HOTBAR_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'];
@@ -104,6 +107,9 @@ export class Interaction {
         return { kind: 'campfire' };
       }
     }
+    // Monsters are the threat, so they win over animals/trees when in reach.
+    const monster = this.world.monsters.findTarget(x, z, f.x, f.z, ANIMAL_REACH, ANIMAL_AIM_MIN_DOT);
+    if (monster) return { kind: 'monster', monster };
     const tree = this.world.forest.findTarget(x, z, f.x, f.z, REACH_DISTANCE, AIM_MIN_DOT);
     const animal = this.world.livestock.findTarget(x, z, f.x, f.z, ANIMAL_REACH, ANIMAL_AIM_MIN_DOT);
     // Animals win ties: they're moving, so give them priority when both are in reach.
@@ -163,6 +169,8 @@ export class Interaction {
       return hasAxe ? 'Hold click: chop tree' : 'Hold click: chop tree (an axe is faster)';
     }
     if (target?.kind === 'animal') return `Hold click: attack ${ANIMALS[target.animal.kind].name}`;
+    if (target?.kind === 'monster') return `Hold click: fight the ${MONSTERS[target.monster.kind].name}`;
+    if (this.world.nearCraftingTable(this.player.position.x, this.player.position.z)) return 'C: open crafting';
     return null;
   }
 
@@ -173,8 +181,21 @@ export class Interaction {
       this.feedCampfire();
     } else if (target.kind === 'animal') {
       this.attack(target.animal);
+    } else if (target.kind === 'monster') {
+      this.attackMonster(target.monster);
     } else {
       this.chop(target.tree);
+    }
+  }
+
+  private attackMonster(monster: Monster): void {
+    this.cooldown = ATTACK_COOLDOWN;
+    this.player.swing();
+    const stack = this.inventory.selectedStack;
+    const damage = (stack && ITEMS[stack.id].damage) || PUNCH_DAMAGE;
+    const { x, z } = this.player.position;
+    if (this.world.monsters.hit(monster, damage, x, z)) {
+      this.hud.toast(`You killed the ${MONSTERS[monster.kind].name}`);
     }
   }
 

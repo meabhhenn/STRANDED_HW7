@@ -121,6 +121,35 @@ export function createAxe(): THREE.Group {
   return g;
 }
 
+/** Wooden spear pointing up (+Y), tip toward -Z lean; origin at the grip. A long shaft with a sharp tip. */
+export function createSpear(): THREE.Group {
+  const g = new THREE.Group();
+  const shaft = new THREE.Mesh(
+    faceted(new THREE.CylinderGeometry(0.026, 0.03, 1.15, 6)).translate(0, 0.45, 0),
+    toon(0xa87340, { map: textures.plank() }),
+  );
+  // Lashing just below the head.
+  const lash = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.06).translate(0, 0.92, 0), toon(0x5a3418));
+  // Carved wooden tip (a short pyramid-ish cone).
+  const tip = new THREE.Mesh(faceted(new THREE.ConeGeometry(0.06, 0.26, 4)).translate(0, 1.12, 0), toon(0xf0e6cf));
+  g.add(shaft, lash, tip);
+  return g;
+}
+
+/** Stone axe pointing up (+Y), blade toward -Z; origin at the grip. Like createAxe but with a grey stone head. */
+export function createStoneAxe(): THREE.Group {
+  const g = new THREE.Group();
+  const handle = new THREE.Mesh(
+    faceted(new THREE.CylinderGeometry(0.032, 0.038, 0.82, 6)).translate(0, 0.28, 0),
+    toon(0x8a5a2b, { map: textures.plank() }),
+  );
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.26, 0.32).translate(0, 0.6, -0.11), toon(0x8b9096));
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.28, 0.06).translate(0, 0.6, -0.3), toon(0xcfd4d8));
+  const binding = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.08).translate(0, 0.47, 0), toon(0x4a2d16));
+  g.add(handle, head, edge, binding);
+  return g;
+}
+
 /** Place `count` copies of `make()` in a tight ring so piles read as piles. */
 export function arrange(count: number, max: number, radius: number, make: (i: number) => THREE.Object3D): THREE.Group {
   const g = new THREE.Group();

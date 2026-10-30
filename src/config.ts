@@ -166,3 +166,66 @@ export const COOK_DROP_RADIUS = 1.8;
 export const PIXEL_RENDER_HEIGHT = 270;
 /** Colour steps per channel after quantising (lower = fewer colours, more retro). */
 export const PALETTE_LEVELS = 9;
+
+// ---- Night monsters (SPEC rule 2 / ARCHITECTURE "Extending": hostile mobs) -
+/** HP of a night monster. Player fists do PUNCH_DAMAGE (1), the axe 2. */
+export const MONSTER_HP = 6;
+/** Collision radius (metres). */
+export const MONSTER_RADIUS = 0.5;
+/** Chase speed while hunting the player (metres/second). */
+export const MONSTER_CHASE_SPEED = 2.6;
+/** Wander speed while the player is out of detection range. */
+export const MONSTER_WANDER_SPEED = 1.1;
+/** The monster notices and starts chasing the player within this distance. */
+export const MONSTER_DETECT_RANGE = 28;
+/** Centre-to-centre distance at which the monster can land a hit. */
+export const MONSTER_ATTACK_RANGE = 1.6;
+/** Damage per successful hit on the player. */
+export const MONSTER_ATTACK_DAMAGE = 8;
+/** Minimum seconds between a monster's attacks. */
+export const MONSTER_ATTACK_COOLDOWN = 1.2;
+/** How many monsters to keep alive at once during the night. */
+export const MONSTER_MAX_ALIVE = 6;
+/** Seconds between spawn attempts while below the cap at night. */
+export const MONSTER_SPAWN_INTERVAL = 6;
+/** Monsters spawn at least / at most this far from the player (metres). */
+export const MONSTER_SPAWN_MIN_DISTANCE = 22;
+export const MONSTER_SPAWN_MAX_DISTANCE = 45;
+/** Seconds an animal runs away is to flee; monsters instead keep a flee-less chase.
+ *  A monster caught inside the safe zone retreats at this speed to the edge. */
+export const MONSTER_RETREAT_SPEED = 3.4;
+/** Seconds of hit squash animation. */
+export const MONSTER_HURT_TIME = 0.25;
+/** Seconds the death animation plays before the body is removed. */
+export const MONSTER_DEATH_TIME = 0.8;
+
+// ---- Crafting (SPEC feature 7: craft weapons from gathered materials) ------
+/** How close (metres, centre-to-centre) the player must be to the table to craft. */
+export const CRAFT_TABLE_REACH = 3.2;
+/** Where the crafting table sits relative to the campfire at the origin. */
+export const CRAFT_TABLE_X = 3.5;
+export const CRAFT_TABLE_Z = 2.5;
+/** Collision radius of the crafting table (metres). */
+export const CRAFT_TABLE_RADIUS = 0.8;
+
+// Weapon stats for crafted gear. Fists are PUNCH_DAMAGE (1); the starting
+// wooden axe is damage 2 / chopPower 2. Crafted weapons beat those.
+/** Wooden spear: a dedicated weapon. Highest damage so monsters are easier to fight. */
+export const SPEAR_DAMAGE = 5;
+/** The spear can still chop, but poorly (it's a weapon, not a tool). */
+export const SPEAR_CHOP_POWER = 1;
+/** Stone axe: a better tool than the wooden axe, and a decent weapon. */
+export const STONE_AXE_DAMAGE = 3;
+export const STONE_AXE_CHOP_POWER = 3;
+
+/**
+ * Recipe costs, keyed by the crafted item id. Each entry lists the item ids and
+ * counts consumed from the inventory. Add new recipes here and in CRAFTING_RECIPES.
+ */
+export const CRAFT_COSTS = {
+  wooden_spear: [{ item: 'log', count: 3 }],
+  stone_axe: [
+    { item: 'log', count: 3 },
+    { item: 'leather', count: 2 },
+  ],
+} as const;

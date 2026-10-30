@@ -1,8 +1,33 @@
 import * as THREE from 'three';
-import { arrange, createAxe, createFeather, createHide, createLog, createSteak, createWoolPuffs } from '../render/props';
+import {
+  SPEAR_CHOP_POWER,
+  SPEAR_DAMAGE,
+  STONE_AXE_CHOP_POWER,
+  STONE_AXE_DAMAGE,
+} from '../config';
+import {
+  arrange,
+  createAxe,
+  createFeather,
+  createHide,
+  createLog,
+  createSpear,
+  createSteak,
+  createStoneAxe,
+  createWoolPuffs,
+} from '../render/props';
 
 /** Add new item ids here, then give them an entry in ITEMS below (and an icon in ui/icons.ts). */
-export type ItemId = 'log' | 'wooden_axe' | 'raw_meat' | 'cooked_meat' | 'leather' | 'wool' | 'feather';
+export type ItemId =
+  | 'log'
+  | 'wooden_axe'
+  | 'wooden_spear'
+  | 'stone_axe'
+  | 'raw_meat'
+  | 'cooked_meat'
+  | 'leather'
+  | 'wool'
+  | 'feather';
 
 export interface ItemDef {
   id: ItemId;
@@ -50,6 +75,42 @@ export const ITEMS: Record<ItemId, ItemDef> = {
       // Lying flat on the ground.
       const g = new THREE.Group();
       const axe = createAxe();
+      axe.rotation.x = Math.PI / 2;
+      axe.position.y = 0.07;
+      g.add(axe);
+      return g;
+    },
+  },
+  wooden_spear: {
+    id: 'wooden_spear',
+    name: 'Wooden Spear',
+    maxStack: 1,
+    color: '#c89a5a',
+    damage: SPEAR_DAMAGE,
+    chopPower: SPEAR_CHOP_POWER,
+    createHeldMesh: () => createSpear(),
+    createMesh() {
+      // Lying flat on the ground.
+      const g = new THREE.Group();
+      const spear = createSpear();
+      spear.rotation.x = Math.PI / 2;
+      spear.position.y = 0.07;
+      g.add(spear);
+      return g;
+    },
+  },
+  stone_axe: {
+    id: 'stone_axe',
+    name: 'Stone Axe',
+    maxStack: 1,
+    color: '#8b9096',
+    damage: STONE_AXE_DAMAGE,
+    chopPower: STONE_AXE_CHOP_POWER,
+    createHeldMesh: () => createStoneAxe(),
+    createMesh() {
+      // Lying flat on the ground.
+      const g = new THREE.Group();
+      const axe = createStoneAxe();
       axe.rotation.x = Math.PI / 2;
       axe.position.y = 0.07;
       g.add(axe);

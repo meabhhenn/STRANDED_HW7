@@ -57,6 +57,20 @@
       input[type='range'] { width: 70%; accent-color: var(--gold); }
       input[type='checkbox'] { accent-color: var(--gold); width: 14px; height: 14px; vertical-align: middle; }
       #history-list { margin: 0 0 14px; padding-left: 24px; text-align: left; font-size: 8px; line-height: 1.8; max-height: 96px; overflow-y: auto; }
+
+      /* ---- Crafting menu ---- */
+      #crafting { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(10, 8, 6, 0.65); }
+      #crafting .box { background: var(--panel); color: var(--paper); border: 4px solid var(--ink); box-shadow: 0 0 0 3px #fff3d6, 8px 8px 0 rgba(0,0,0,0.5); padding: 20px 24px; box-sizing: border-box; width: min(520px, 94vw); max-height: 94vh; overflow-y: auto; cursor: default; }
+      #craft-list { list-style: none; margin: 10px 0 14px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+      .recipe { display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--ink); border: 3px solid #5b4430; box-shadow: inset 0 0 0 2px #2b1d14; text-align: left; }
+      .recipe .icon { width: 40px; height: 40px; image-rendering: pixelated; flex: 0 0 auto; }
+      .recipe .info { flex: 1 1 auto; }
+      .recipe .name { font-size: 10px; color: var(--gold); margin-bottom: 6px; }
+      .recipe .cost { font-size: 8px; line-height: 1.7; }
+      .recipe .cost .short { color: var(--red); }
+      .recipe button { font-size: 9px; padding: 8px 10px; margin: 0; box-shadow: 0 4px 0 var(--ink); flex: 0 0 auto; }
+      .recipe button:disabled { background: #6b5a3a; color: #cbb98f; cursor: not-allowed; box-shadow: 0 4px 0 var(--ink); }
+      #craft-hint { font-size: 8px; line-height: 1.7; opacity: 0.85; }
       button { font-family: inherit; font-size: 11px; padding: 10px 16px; margin: 0 6px; cursor: pointer; color: var(--ink); background: var(--gold); border: 3px solid var(--ink); box-shadow: 0 5px 0 var(--ink); }
       button:hover { background: #ffe58a; }
       button:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
@@ -88,6 +102,7 @@
           <tr><td>E</td><td>Pick up</td></tr>
           <tr><td>Q (Shift+Q)</td><td>Drop one (whole stack)</td></tr>
           <tr><td>1-9, 0 or [ ]</td><td>Select inventory slot</td></tr>
+          <tr><td>C</td><td>Craft (near the crafting table)</td></tr>
           <tr><td>Numpad + / -</td><td>Zoom in / out (also = and -)</td></tr>
           <tr><td>Esc</td><td>Pause</td></tr>
         </table>
@@ -101,6 +116,13 @@
         <p>Game history</p>
         <ol id="history-list"></ol>
         <button id="resume" type="button">Click to play</button>
+      </div>
+    </div>
+    <div id="crafting" class="hidden">
+      <div class="box">
+        <h1>CRAFTING</h1>
+        <ul id="craft-list"></ul>
+        <p id="craft-hint">Press C or Esc to close.</p>
       </div>
     </div>
     <div id="gameover" class="hidden">
