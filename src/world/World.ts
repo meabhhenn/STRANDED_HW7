@@ -15,6 +15,7 @@ import {
   UNLOCK_RADIUS_PER_LEVEL,
   WATER_LEVEL,
 } from '../config';
+import { Chests } from '../entities/Chests';
 import { Livestock } from '../entities/Livestock';
 import { Monsters } from '../entities/Monsters';
 import type { PlayerStats } from '../player/Stats';
@@ -46,6 +47,7 @@ export class World {
   readonly drops: DroppedItems;
   readonly livestock: Livestock;
   readonly monsters: Monsters;
+  readonly chests: Chests;
   /** Set by Game so night monsters can damage the player. */
   stats: PlayerStats | null = null;
   private readonly sky: Sky;
@@ -93,6 +95,9 @@ export class World {
 
     this.monsters = new Monsters(this);
     this.scene.add(this.monsters.group);
+
+    this.chests = new Chests(this);
+    this.scene.add(this.chests.group);
   }
 
   /** True only during the in-game night (hook for night monster spawns). */
@@ -180,5 +185,6 @@ export class World {
     this.forest.update(dt, focus.x, focus.z);
     this.livestock.update(dt, focus.x, focus.z);
     if (this.stats) this.monsters.update(dt, focus.x, focus.z, this.stats);
+    this.chests.update(dt);
   }
 }

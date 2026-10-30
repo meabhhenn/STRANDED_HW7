@@ -150,6 +150,70 @@ export function createStoneAxe(): THREE.Group {
   return g;
 }
 
+// ---- Medical ------------------------------------------------------------------
+
+/** A rolled bandage: a pale gauze cylinder with a red stripe, lying flat. */
+export function createBandage(): THREE.Group {
+  const g = new THREE.Group();
+  const roll = new THREE.Mesh(
+    faceted(new THREE.CylinderGeometry(0.1, 0.1, 0.22, 8).rotateZ(Math.PI / 2)),
+    toon(0xf2ece0),
+  );
+  roll.position.y = 0.1;
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.205, 0.205), toon(0xd9423e));
+  stripe.position.y = 0.1;
+  g.add(roll, stripe);
+  return g;
+}
+
+/** A medkit: a white box with a red cross on top. */
+export function createMedkit(): THREE.Group {
+  const g = new THREE.Group();
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.26), toon(0xf4f1ea));
+  box.position.y = 0.12;
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.05, 0.27), toon(0xd9423e));
+  lid.position.y = 0.25;
+  const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.16), toon(0xd9423e));
+  crossV.position.y = 0.235;
+  const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.06), toon(0xd9423e));
+  crossH.position.y = 0.235;
+  g.add(box, lid, crossV, crossH);
+  return g;
+}
+
+// ---- Loot chest ----------------------------------------------------------------
+
+/**
+ * A wooden loot chest with iron bands and a lid. `opened` tilts the lid back so
+ * a looted chest reads as empty. Origin at ground level, facing -Z.
+ */
+export function createChest(opened: boolean): THREE.Group {
+  const g = new THREE.Group();
+  const wood = toon(0xffffff, { map: textures.plank() });
+  const iron = toon(0x4a4f57);
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.42, 0.5), wood);
+  base.position.y = 0.21;
+  g.add(base);
+  for (const x of [-0.3, 0.3]) {
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.44, 0.52), iron);
+    band.position.set(x, 0.21, 0);
+    g.add(band);
+  }
+
+  // Lid pivots at the back-top edge so it can swing open.
+  const lidPivot = new THREE.Group();
+  lidPivot.position.set(0, 0.42, 0.25);
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.18, 0.5), wood);
+  lid.position.set(0, 0.09, -0.25);
+  const latch = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.06), iron);
+  latch.position.set(0, 0.02, -0.5);
+  lidPivot.add(lid, latch);
+  lidPivot.rotation.x = opened ? -1.9 : 0;
+  g.add(lidPivot);
+  return g;
+}
+
 /** Place `count` copies of `make()` in a tight ring so piles read as piles. */
 export function arrange(count: number, max: number, radius: number, make: (i: number) => THREE.Object3D): THREE.Group {
   const g = new THREE.Group();

@@ -281,3 +281,27 @@ export const BOSS_ATTACK_DAMAGE = 22;
 export const BOSS_ATTACK_COOLDOWN = 1.6;
 /** Fuel (seconds) the campfire loses per boss hit (bosses wreck the fire). */
 export const BOSS_CAMPFIRE_FUEL_LOSS_PER_HIT = 60;
+
+// ---- Loot chests (SPEC feature 8: random chests with survival loot) -------
+/** How many chests exist in the forest at once. Looted ones respawn elsewhere. */
+export const CHEST_COUNT = 6;
+/** Max centre-to-centre distance to open a chest with E, and aim cone. */
+export const CHEST_REACH = 2.6;
+export const CHEST_AIM_MIN_DOT = 0.5;
+/** Each opened chest drops between this many loot piles. */
+export const CHEST_MIN_DROPS = 1;
+export const CHEST_MAX_DROPS = 3;
+/** Seconds after a chest is looted before it reappears in a new spot. */
+export const CHEST_RESPAWN_SECONDS = 150;
+/**
+ * Loot table. Each opened chest rolls CHEST_MIN_DROPS..CHEST_MAX_DROPS entries
+ * from this list (weighted by `weight`), dropping `min..max` of the item each.
+ * `wooden_spear` is rare, so it shows up only "sometimes".
+ */
+export const CHEST_LOOT = [
+  { item: 'bandage', min: 1, max: 3, weight: 5 },
+  { item: 'medkit', min: 1, max: 1, weight: 2 },
+  { item: 'log', min: 3, max: 8, weight: 5 },
+  { item: 'leather', min: 1, max: 3, weight: 4 },
+  { item: 'wooden_spear', min: 1, max: 1, weight: 1 },
+] as const;

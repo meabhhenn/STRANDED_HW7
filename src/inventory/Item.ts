@@ -8,9 +8,11 @@ import {
 import {
   arrange,
   createAxe,
+  createBandage,
   createFeather,
   createHide,
   createLog,
+  createMedkit,
   createSpear,
   createSteak,
   createStoneAxe,
@@ -27,7 +29,9 @@ export type ItemId =
   | 'cooked_meat'
   | 'leather'
   | 'wool'
-  | 'feather';
+  | 'feather'
+  | 'bandage'
+  | 'medkit';
 
 export interface ItemDef {
   id: ItemId;
@@ -172,5 +176,21 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     maxStack: 50,
     color: '#dfe9f2',
     createMesh: (count) => arrange(count, 3, 0.12, () => createFeather()),
+  },
+  bandage: {
+    id: 'bandage',
+    name: 'Bandage',
+    maxStack: 10,
+    color: '#f2ece0',
+    heal: 25, // click to use like food (restores health only)
+    createMesh: (count) => arrange(count, 3, 0.16, () => createBandage()),
+  },
+  medkit: {
+    id: 'medkit',
+    name: 'Medkit',
+    maxStack: 5,
+    color: '#f4f1ea',
+    heal: 60,
+    createMesh: (count) => arrange(count, 2, 0.2, () => createMedkit()),
   },
 };

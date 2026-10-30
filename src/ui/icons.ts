@@ -28,6 +28,9 @@ const PALETTE: Record<string, string> = {
   s: '#8b9096', // stone
   S: '#cfd4d8', // stone highlight / blade edge
   t: '#f0e6cf', // pale carved wood tip
+  z: '#f2ece0', // gauze / white
+  Z: '#d9423e', // medical red
+  m: '#4a4f57', // iron / dark trim
 };
 
 const ICONS: Record<ItemId, string[]> = {
@@ -100,6 +103,34 @@ const ICONS: Record<ItemId, string[]> = {
     '.kbk........',
     'kbk.........',
     'kk..........',
+  ],
+  bandage: [
+    '............',
+    '............',
+    '...kkkkkk...',
+    '..kzzZZzzk..',
+    '.kzzzZZzzzk.',
+    '.kzzzZZzzzk.',
+    '.kzzzZZzzzk.',
+    '.kzzzZZzzzk.',
+    '..kzzZZzzk..',
+    '...kkkkkk...',
+    '............',
+    '............',
+  ],
+  medkit: [
+    '............',
+    '..kkkkkkkk..',
+    '.kZZZZZZZZk.',
+    '.kzzzZZzzzk.',
+    '.kzzzZZzzzk.',
+    '.kzZZZZZZzk.',
+    '.kzzzZZzzzk.',
+    '.kzzzZZzzzk.',
+    '.kzzzzzzzzk.',
+    '.kmmmmmmmmk.',
+    '..kkkkkkkk..',
+    '............',
   ],
   cooked_meat: [], // derived from raw_meat below
   leather: [

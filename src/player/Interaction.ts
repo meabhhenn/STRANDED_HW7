@@ -158,6 +158,7 @@ export class Interaction {
   private promptFor(target: ClickTarget, food: Consumable | null): string | null {
     const pile = this.nearestPile();
     if (pile) return `E: pick up ${pile.count} ${ITEMS[pile.id].name}${pile.count > 1 ? 's' : ''}`;
+    if (this.facedChest()) return 'E: open chest';
     if (this.stack()?.id === 'raw_meat' && this.dropPointNearFire()) {
       return this.world.campfire.lit ? 'Q: drop in fire to cook  |  Click: eat raw' : 'The fire is out: relight it to cook';
     }
@@ -243,7 +244,11 @@ export class Interaction {
 
   private pickUp(): void {
     const pile = this.nearestPile();
-    if (!pile) return;
+    if (!pile) {
+      // No pile underfoot: E opens a loot chest the player is facing (SPEC feature 8).
+      this.openChest();
+      return;
+    }
     const left = this.inventory.add(pile.id, pile.count);
     if (left === pile.count) {
       this.hud.toast('Inventory full');
@@ -251,6 +256,23 @@ export class Interaction {
     }
     this.world.drops.setCount(pile, left);
     if (left > 0) this.hud.toast('Inventory full: left some behind');
+  }
+
+  /** The unopened chest the player is facing within reach, or null. */
+  private facedChest() {
+    const { x, z } = this.player.position;
+    const f = this.player.facing;
+    return this.world.chests.findTarget(x, z, f.x, f.z);
+  }
+
+  /** Open the faced chest: it drops its loot via DroppedItems and shows as opened. */
+  private openChest(): void {
+    const chest = this.facedChest();
+    if (!chest) return;
+    const dropped = this.world.chests.open(chest);
+    if (!dropped) return;
+    const names = dropped.map((id) => ITEMS[id].name);
+    this.hud.toast(`Chest opened: ${names.join(', ')} dropped. Pick up with E`, 3500);
   }
 
   private drop(wholeStack: boolean): void {
