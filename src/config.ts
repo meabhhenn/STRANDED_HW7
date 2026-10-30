@@ -229,3 +229,10 @@ export const CRAFT_COSTS = {
     { item: 'leather', count: 2 },
   ],
 } as const;
+
+// ---- Win condition (SPEC rule 4: survive 50 nights, then rescued) ---------
+/**
+ * Nights the player must survive to win. The plane arrives at the start of the
+ * next day (day WIN_NIGHT + 1), i.e. after surviving night WIN_NIGHT.
+ */
+export const WIN_NIGHT = 50;

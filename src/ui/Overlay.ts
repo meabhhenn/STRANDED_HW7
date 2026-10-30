@@ -44,7 +44,7 @@ export class Overlay {
     this.historyEl.replaceChildren();
     runs.slice(0, 8).forEach((r) => {
       const li = document.createElement('li');
-      const cause = r.cause === 'starvation' ? 'starved' : 'killed';
+      const cause = r.won ? 'Rescued' : r.cause === 'starvation' ? 'starved' : 'killed';
       li.textContent = `${r.nights} night${r.nights === 1 ? '' : 's'} (day ${r.day}), ${cause}, ${new Date(r.endedAt).toLocaleDateString()}`;
       this.historyEl.appendChild(li);
     });

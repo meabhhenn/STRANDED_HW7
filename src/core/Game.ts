@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMPFIRE_GROUND_HEIGHT, CAMPFIRE_OUT_GRACE_SECONDS } from '../config';
+import { CAMPFIRE_GROUND_HEIGHT, CAMPFIRE_OUT_GRACE_SECONDS, WIN_NIGHT } from '../config';
 import { Inventory } from '../inventory/Inventory';
 import { Interaction } from '../player/Interaction';
 import { Player } from '../player/Player';
@@ -7,6 +7,7 @@ import { PlayerStats, type DamageSource } from '../player/Stats';
 import { Crafting } from '../ui/Crafting';
 import { craft, type Recipe } from '../inventory/recipes';
 import { GameOver } from '../ui/GameOver';
+import { Victory } from '../ui/Victory';
 import { Hud } from '../ui/Hud';
 import { PixelRenderer } from '../render/PixelRenderer';
 import { Overlay } from '../ui/Overlay';
@@ -22,8 +23,9 @@ import { Input } from './Input';
  *  - gameover: player died (game-over screen)
  *  - home:     after "Save progress" on the game-over screen (start overlay, "New game")
  *  - crafting: crafting menu open (sim paused, pointer unlocked, mouse usable)
+ *  - victory:  player survived to the rescue (win screen)
  */
-type State = 'menu' | 'playing' | 'paused' | 'gameover' | 'home' | 'crafting';
+type State = 'menu' | 'playing' | 'paused' | 'gameover' | 'home' | 'crafting' | 'victory';
 
 /**
  * Top-level orchestrator: renderer, main loop, run lifecycle.
@@ -39,6 +41,7 @@ export class Game {
   private readonly input: Input;
   private readonly overlay: Overlay;
   private readonly gameOver: GameOver;
+  private readonly victory: Victory;
   private readonly crafting: Crafting;
   private readonly hud = new Hud();
   private readonly clock = new THREE.Clock();
@@ -60,6 +63,7 @@ export class Game {
       () => this.restart(),
       () => this.saveAndGoHome(),
     );
+    this.victory = new Victory(() => this.restartFromVictory());
     this.crafting = new Crafting((recipe) => this.tryCraft(recipe));
     this.newRun();
     this.overlay.show('Click to play');
@@ -119,8 +123,16 @@ export class Game {
     }
 
     // Dev shortcut: ?hour=22 starts at 10pm, to eyeball the night look.
-    const hour = Number(new URLSearchParams(location.search).get('hour'));
+    const params = new URLSearchParams(location.search);
+    const hour = Number(params.get('hour'));
     if (hour) this.world.dayNight.setHour(hour);
+    // Dev shortcut: ?day=50 jumps the clock to that day so the win (day 51) is
+    // quick to reach without surviving 50 nights. Nights-survived is synced too.
+    const day = Number(params.get('day'));
+    if (day >= 1) {
+      this.world.dayNight.day = Math.floor(day);
+      this.world.dayNight.nightsSurvived = Math.max(0, Math.floor(day) - 1);
+    }
     this.updateHudInfo();
   }
 
@@ -158,6 +170,39 @@ export class Game {
     this.hud.setPrompt(null);
     this.updateHudInfo(); // final health/hunger values behind the game-over box
     this.gameOver.show(run, history.bestStreak, newBest);
+  }
+
+  /**
+   * SPEC rule 4: the plane arrives once the player reaches the day after night
+   * WIN_NIGHT (i.e. day WIN_NIGHT + 1). Fires once, then shows the win screen.
+   */
+  private checkWin(): void {
+    if (this.world.dayNight.day >= WIN_NIGHT + 1) this.onWin();
+  }
+
+  private onWin(): void {
+    this.state = 'victory';
+    this.input.clear();
+    if (document.pointerLockElement) document.exitPointerLock();
+    // Record the win immediately (same as deaths) so it is never lost.
+    const run = {
+      endedAt: new Date().toISOString(),
+      nights: this.world.dayNight.nightsSurvived,
+      day: this.world.dayNight.day,
+      cause: 'monster' as DamageSource, // unused for wins; `won` marks the outcome
+      won: true,
+    };
+    const newBest = history.record(run);
+    this.hud.setPrompt(null);
+    this.updateHudInfo();
+    this.victory.show(run, history.bestStreak, newBest);
+  }
+
+  /** Victory button: start a fresh run immediately. */
+  private restartFromVictory(): void {
+    this.victory.hide();
+    this.newRun();
+    this.resume();
   }
 
   /** Game-over button: start a fresh run immediately. */
@@ -243,6 +288,7 @@ export class Game {
       this.world.update(dt, this.player.position);
       this.updateHudInfo();
       this.hud.setCrosshair(this.player.isFirstPerson);
+      this.checkWin();
     }
     this.input.endFrame();
     this.renderer.render(this.world.scene, this.player.camera);

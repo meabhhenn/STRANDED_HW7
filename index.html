@@ -40,14 +40,16 @@
       .slot .count { position: absolute; bottom: 3px; right: 4px; font-size: 8px; text-shadow: 1px 1px 0 var(--ink); }
 
       /* ---- Menus ---- */
-      #overlay, #gameover { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; }
+      #overlay, #gameover, #victory { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; }
       #overlay { background: rgba(10, 8, 6, 0.65); cursor: pointer; }
       #gameover { background: rgba(50, 0, 0, 0.75); }
-      #panel, #gameover .box { background: var(--panel); color: var(--paper); border: 4px solid var(--ink); box-shadow: 0 0 0 3px #fff3d6, 8px 8px 0 rgba(0,0,0,0.5); padding: 20px 24px; box-sizing: border-box; cursor: default; }
+      #victory { background: rgba(6, 30, 46, 0.78); }
+      #panel, #gameover .box, #victory .box { background: var(--panel); color: var(--paper); border: 4px solid var(--ink); box-shadow: 0 0 0 3px #fff3d6, 8px 8px 0 rgba(0,0,0,0.5); padding: 20px 24px; box-sizing: border-box; cursor: default; }
       #panel { width: min(560px, 94vw); max-height: 94vh; overflow-y: auto; }
-      #gameover .box { width: min(460px, 94vw); }
+      #gameover .box, #victory .box { width: min(460px, 94vw); }
       h1 { margin: 0 0 10px; font-size: 22px; letter-spacing: 4px; color: var(--gold); text-shadow: 3px 3px 0 var(--ink); }
       #gameover h1 { color: #ff6b5e; }
+      #victory h1 { color: #7fe0a0; }
       p { margin: 8px 0; font-size: 9px; line-height: 1.6; }
       #best-streak, #go-best { color: var(--gold); min-height: 1.2em; }
       table { margin: 0 auto 14px; text-align: left; border-collapse: collapse; font-size: 8px; line-height: 1.7; }
@@ -133,6 +135,15 @@
         <p id="go-best"></p>
         <button id="go-restart" type="button">Restart</button>
         <button id="go-save" type="button">Save progress</button>
+      </div>
+    </div>
+    <div id="victory" class="hidden">
+      <div class="box">
+        <h1>RESCUED!</h1>
+        <p id="win-cause"></p>
+        <p id="win-streak"></p>
+        <p id="win-best"></p>
+        <button id="win-restart" type="button">Restart</button>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

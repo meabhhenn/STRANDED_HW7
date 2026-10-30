@@ -12,6 +12,8 @@ export interface RunRecord {
   /** In-game day number reached. */
   day: number;
   cause: DamageSource;
+  /** True if the run ended in a win (survived to the rescue). Absent = a death. */
+  won?: boolean;
 }
 
 /**
