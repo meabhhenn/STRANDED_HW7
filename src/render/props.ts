@@ -214,6 +214,81 @@ export function createChest(opened: boolean): THREE.Group {
   return g;
 }
 
+// ---- Ore & metal ---------------------------------------------------------------
+
+/**
+ * A grey boulder with glinting metal veins. Used both for the mineable rock in
+ * the world and (smaller) for dropped metal_ore piles. Origin at ground level.
+ */
+export function createOreRock(): THREE.Group {
+  const g = new THREE.Group();
+  const stone = toon(0x7f868d);
+  const stoneDark = toon(0x5c6268);
+  const ore = toon(0xd8b25a); // brassy ore veins
+  const rock = new THREE.Mesh(faceted(new THREE.DodecahedronGeometry(0.5, 0)), stone);
+  rock.position.y = 0.4;
+  rock.scale.set(1, 0.8, 1);
+  g.add(rock);
+  // A couple of smaller chunks and ore nuggets clustered around it.
+  const chunk = new THREE.Mesh(faceted(new THREE.DodecahedronGeometry(0.26, 0)), stoneDark);
+  chunk.position.set(0.34, 0.2, 0.14);
+  g.add(chunk);
+  for (const [x, y, z] of [
+    [0.12, 0.5, -0.28],
+    [-0.26, 0.42, 0.1],
+    [0.1, 0.62, 0.16],
+  ]) {
+    const nugget = new THREE.Mesh(faceted(new THREE.IcosahedronGeometry(0.1, 0)), ore);
+    nugget.position.set(x, y, z);
+    g.add(nugget);
+  }
+  return g;
+}
+
+/** A small metal ore nugget for dropped piles (origin at ground level). */
+export function createOreNugget(): THREE.Group {
+  const g = new THREE.Group();
+  const nugget = new THREE.Mesh(faceted(new THREE.IcosahedronGeometry(0.16, 0)), toon(0x9a8f7a));
+  nugget.position.y = 0.14;
+  const vein = new THREE.Mesh(faceted(new THREE.IcosahedronGeometry(0.08, 0)), toon(0xd8b25a));
+  vein.position.set(0.06, 0.2, 0.04);
+  g.add(nugget, vein);
+  return g;
+}
+
+/** Iron spear pointing up (+Y); like the wooden spear but with a steel head. Origin at grip. */
+export function createIronSpear(): THREE.Group {
+  const g = new THREE.Group();
+  const shaft = new THREE.Mesh(
+    faceted(new THREE.CylinderGeometry(0.028, 0.032, 1.15, 6)).translate(0, 0.45, 0),
+    toon(0x7a5230, { map: textures.plank() }),
+  );
+  const lash = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.06).translate(0, 0.92, 0), toon(0x4a4f57));
+  // Steel leaf-blade tip.
+  const tip = new THREE.Mesh(faceted(new THREE.ConeGeometry(0.08, 0.34, 4)).translate(0, 1.16, 0), toon(0xcfd4d8));
+  g.add(shaft, lash, tip);
+  return g;
+}
+
+/** A simple rifle held level, barrel toward -Z; origin at the grip. */
+export function createGun(): THREE.Group {
+  const g = new THREE.Group();
+  const metal = toon(0x40454c);
+  const dark = toon(0x26292e);
+  const wood = toon(0x6e4524);
+  // Body/receiver.
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.42).translate(0, 0.04, -0.1), metal));
+  // Barrel.
+  g.add(new THREE.Mesh(faceted(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 6)).rotateX(Math.PI / 2).translate(0, 0.06, -0.5), dark));
+  // Wooden stock behind the grip.
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.26).translate(0, 0.02, 0.22), wood));
+  // Grip.
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.2, 0.08).translate(0, -0.08, 0.02), dark);
+  grip.rotation.x = 0.3;
+  g.add(grip);
+  return g;
+}
+
 /** Place `count` copies of `make()` in a tight ring so piles read as piles. */
 export function arrange(count: number, max: number, radius: number, make: (i: number) => THREE.Object3D): THREE.Group {
   const g = new THREE.Group();

@@ -228,6 +228,15 @@ export const CRAFT_COSTS = {
     { item: 'log', count: 3 },
     { item: 'leather', count: 2 },
   ],
+  // SPEC feature 7: metal weapons, mined from ore and crafted at the table.
+  iron_spear: [
+    { item: 'log', count: 2 },
+    { item: 'metal_ore', count: 3 },
+  ],
+  gun: [
+    { item: 'metal_ore', count: 6 },
+    { item: 'leather', count: 2 },
+  ],
 } as const;
 
 // ---- Win condition (SPEC rule 4: survive 50 nights, then rescued) ---------
@@ -305,3 +314,63 @@ export const CHEST_LOOT = [
   { item: 'leather', min: 1, max: 3, weight: 4 },
   { item: 'wooden_spear', min: 1, max: 1, weight: 1 },
 ] as const;
+
+// ---- Metal ore rocks (SPEC feature 7: mine ore to craft metal weapons) ----
+/** How many ore rocks exist in the forest at once. Mined ones regrow in place. */
+export const ROCK_COUNT = 14;
+/** Hit points of an ore rock. A tool's `chopPower` mines it (bare hands = PUNCH_CHOP_POWER). */
+export const ROCK_HITS = 4;
+/** Metal ore dropped when a rock is mined out. */
+export const ROCK_ORE_MIN = 1;
+export const ROCK_ORE_MAX = 3;
+/** Seconds after a rock is mined before it regrows in the same spot. */
+export const ROCK_REGROW_SECONDS = 90;
+/** Seconds a regrowing rock takes to scale back to full size. */
+export const ROCK_GROW_SECONDS = 6;
+/** Collision radius of an ore rock (metres). */
+export const ROCK_RADIUS = 0.7;
+/** A rock will not regrow while the player is closer than this (metres). */
+export const ROCK_REGROW_CLEARANCE = 2.2;
+/** Max centre-to-centre distance to mine a rock, and the aim cone. */
+export const ROCK_REACH = 2.8;
+export const ROCK_AIM_MIN_DOT = 0.75;
+
+// ---- Metal weapons (crafted from ore) -------------------------------------
+/** Iron spear: a stronger spear (beats the wooden spear's SPEAR_DAMAGE 5). */
+export const IRON_SPEAR_DAMAGE = 8;
+export const IRON_SPEAR_CHOP_POWER = 1;
+/** Gun: highest damage, longer reach, but a slower attack cooldown (no ammo system). */
+export const GUN_DAMAGE = 14;
+/** Reach (metres) when attacking with the gun; longer than melee ANIMAL_REACH. */
+export const GUN_REACH = 9;
+/** Seconds between gun shots (slower than the melee ATTACK_COOLDOWN). */
+export const GUN_ATTACK_COOLDOWN = 1.1;
+
+// ---- Wolves (SPEC feature 4: tameable wolves that help the player) --------
+/** How many wild wolves roam the forest at once. */
+export const WOLF_COUNT = 4;
+/** Collision radius of a wolf (metres). */
+export const WOLF_RADIUS = 0.4;
+/** Wolf hit points (the player can still kill one if attacked). */
+export const WOLF_HP = 8;
+/** Raw-meat feedings needed to tame a wild wolf. */
+export const WOLF_TAME_MEAT = 3;
+/** Speeds (metres/second). */
+export const WOLF_WANDER_SPEED = 1.3;
+export const WOLF_FOLLOW_SPEED = 4.2;
+export const WOLF_CHASE_SPEED = 4.6;
+/** A tamed wolf keeps roughly this far from the player while following (metres). */
+export const WOLF_FOLLOW_DISTANCE = 3.5;
+/** A tamed wolf won't stray farther than this from the player before returning. */
+export const WOLF_LEASH_DISTANCE = 26;
+/** Combat: reach to land a hit, damage per hit, seconds between hits. */
+export const WOLF_ATTACK_RANGE = 1.6;
+export const WOLF_ATTACK_DAMAGE = 4;
+export const WOLF_ATTACK_COOLDOWN = 0.8;
+/** A tamed wolf looks this far around the player/fire for monsters to fight at night. */
+export const WOLF_DEFEND_RANGE = 22;
+/** A tamed wolf looks this far around itself for livestock to hunt by day. */
+export const WOLF_HUNT_RANGE = 30;
+/** Seconds of hit squash / death animation. */
+export const WOLF_HURT_TIME = 0.25;
+export const WOLF_DEATH_TIME = 0.8;

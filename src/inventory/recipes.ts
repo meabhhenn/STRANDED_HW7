@@ -21,7 +21,7 @@ export interface Recipe {
  * them into Recipe objects and provides the inventory checks/consumption. Add a
  * recipe by adding its item id to CRAFT_COSTS and listing it in RECIPE_ORDER.
  */
-const RECIPE_ORDER: readonly ItemId[] = ['wooden_spear', 'stone_axe'];
+const RECIPE_ORDER: readonly ItemId[] = ['wooden_spear', 'stone_axe', 'iron_spear', 'gun'];
 
 export const CRAFTING_RECIPES: readonly Recipe[] = RECIPE_ORDER.map((output) => ({
   output,

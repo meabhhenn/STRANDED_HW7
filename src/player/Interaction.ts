@@ -15,6 +15,9 @@ import {
   PUNCH_CHOP_POWER,
   PUNCH_DAMAGE,
   REACH_DISTANCE,
+  ROCK_ORE_MAX,
+  ROCK_ORE_MIN,
+  WOLF_TAME_MEAT,
 } from '../config';
 import type { Input } from '../core/Input';
 import { Inventory } from '../inventory/Inventory';
@@ -27,6 +30,9 @@ import type { Hud } from '../ui/Hud';
 import type { PlayerStats } from './Stats';
 import type { Pile } from '../world/DroppedItems';
 import type { Tree } from '../world/Forest';
+import type { Rock } from '../entities/Rocks';
+import type { Wolf } from '../entities/Wolves';
+import { WOLVES } from '../entities/wolfKinds';
 import type { World } from '../world/World';
 import type { Player } from './Player';
 
@@ -40,6 +46,7 @@ interface Consumable {
 type ClickTarget =
   | { kind: 'campfire' }
   | { kind: 'tree'; tree: Tree }
+  | { kind: 'ore'; rock: Rock }
   | { kind: 'animal'; animal: Animal }
   | { kind: 'monster'; monster: Monster }
   | null;
@@ -81,15 +88,21 @@ export class Interaction {
     if (input.wasPressed('KeyE')) this.pickUp();
     if (input.wasPressed('KeyQ')) this.drop(input.anyDown('ShiftLeft', 'ShiftRight'));
 
-    const food = this.selectedFood();
-    const target = food ? null : this.findClickTarget();
+    // Feeding a wild wolf raw meat to tame it takes priority over eating the
+    // meat, since raw_meat is also a food item (SPEC feature 4).
+    const wolf = this.inventory.selectedStack?.id === 'raw_meat' ? this.facedWildWolf() : null;
+    const food = wolf ? null : this.selectedFood();
+    const target = wolf || food ? null : this.findClickTarget();
     if (input.isMouseDown && this.cooldown <= 0) {
-      if (food) this.eat(food);
+      if (wolf) this.feedWolf(wolf);
+      else if (food) this.eat(food);
       else if (target) this.act(target);
     }
     input.consumeClick(); // edge flag unused for now; keep it from accumulating
 
-    this.hud.setPrompt(this.promptFor(target, food));
+    this.hud.setPrompt(
+      wolf ? `Click: feed the ${WOLVES[wolf.kind].name} (${wolf.fed}/${WOLF_TAME_MEAT} to tame)` : this.promptFor(target, food),
+    );
   }
 
   // ---- targeting ----
@@ -107,14 +120,23 @@ export class Interaction {
         return { kind: 'campfire' };
       }
     }
-    // Monsters are the threat, so they win over animals/trees when in reach.
-    const monster = this.world.monsters.findTarget(x, z, f.x, f.z, ANIMAL_REACH, ANIMAL_AIM_MIN_DOT);
+    // Ranged weapons (the gun) can hit creatures from farther than melee.
+    const stackDef = this.inventory.selectedStack ? ITEMS[this.inventory.selectedStack.id] : undefined;
+    const attackReach = stackDef?.reach ?? ANIMAL_REACH;
+
+    // Monsters are the threat, so they win over animals/trees/ore when in reach.
+    const monster = this.world.monsters.findTarget(x, z, f.x, f.z, attackReach, ANIMAL_AIM_MIN_DOT);
     if (monster) return { kind: 'monster', monster };
     const tree = this.world.forest.findTarget(x, z, f.x, f.z, REACH_DISTANCE, AIM_MIN_DOT);
-    const animal = this.world.livestock.findTarget(x, z, f.x, f.z, ANIMAL_REACH, ANIMAL_AIM_MIN_DOT);
+    const rock = this.world.rocks.findTarget(x, z, f.x, f.z);
+    const animal = this.world.livestock.findTarget(x, z, f.x, f.z, attackReach, ANIMAL_AIM_MIN_DOT);
     // Animals win ties: they're moving, so give them priority when both are in reach.
     if (animal && (!tree || Math.hypot(animal.x - x, animal.z - z) <= Math.hypot(tree.x - x, tree.z - z) + 0.5)) {
       return { kind: 'animal', animal };
+    }
+    // Between a tree and an ore rock, pick whichever is closer.
+    if (rock && (!tree || Math.hypot(rock.x - x, rock.z - z) <= Math.hypot(tree.x - x, tree.z - z))) {
+      return { kind: 'ore', rock };
     }
     return tree ? { kind: 'tree', tree } : null;
   }
@@ -169,6 +191,11 @@ export class Interaction {
       const hasAxe = !!stack && !!ITEMS[stack.id].chopPower;
       return hasAxe ? 'Hold click: chop tree' : 'Hold click: chop tree (an axe is faster)';
     }
+    if (target?.kind === 'ore') {
+      const stack = this.inventory.selectedStack;
+      const hasTool = !!stack && !!ITEMS[stack.id].chopPower;
+      return hasTool ? 'Hold click: mine ore' : 'Hold click: mine ore (a tool is faster)';
+    }
     if (target?.kind === 'animal') return `Hold click: attack ${ANIMALS[target.animal.kind].name}`;
     if (target?.kind === 'monster') return `Hold click: fight the ${MONSTERS[target.monster.kind].name}`;
     if (this.world.nearCraftingTable(this.player.position.x, this.player.position.z)) return 'C: open crafting';
@@ -184,15 +211,34 @@ export class Interaction {
       this.attack(target.animal);
     } else if (target.kind === 'monster') {
       this.attackMonster(target.monster);
+    } else if (target.kind === 'ore') {
+      this.mine(target.rock);
     } else {
       this.chop(target.tree);
     }
   }
 
-  private attackMonster(monster: Monster): void {
-    this.cooldown = ATTACK_COOLDOWN;
+  private mine(rock: Rock): void {
+    this.cooldown = CHOP_COOLDOWN;
     this.player.swing();
     const stack = this.inventory.selectedStack;
+    const power = (stack && ITEMS[stack.id].chopPower) || PUNCH_CHOP_POWER;
+    if (!this.world.rocks.hit(rock, power)) return;
+    const n = ROCK_ORE_MIN + Math.floor(Math.random() * (ROCK_ORE_MAX - ROCK_ORE_MIN + 1));
+    // Drop the ore at the rock, nudged toward the player (same shape as chop()).
+    const px = this.player.position.x;
+    const pz = this.player.position.z;
+    const d = Math.hypot(px - rock.x, pz - rock.z) || 1;
+    const x = rock.x + ((px - rock.x) / d) * 0.9;
+    const z = rock.z + ((pz - rock.z) / d) * 0.9;
+    this.world.drops.spawn('metal_ore', n, x, z);
+    this.hud.toast(`Rock mined: ${n} metal ore dropped`);
+  }
+
+  private attackMonster(monster: Monster): void {
+    const stack = this.inventory.selectedStack;
+    this.cooldown = (stack && ITEMS[stack.id].attackCooldown) || ATTACK_COOLDOWN;
+    this.player.swing();
     const damage = (stack && ITEMS[stack.id].damage) || PUNCH_DAMAGE;
     const { x, z } = this.player.position;
     if (this.world.monsters.hit(monster, damage, x, z)) {
@@ -201,9 +247,9 @@ export class Interaction {
   }
 
   private attack(animal: Animal): void {
-    this.cooldown = ATTACK_COOLDOWN;
-    this.player.swing();
     const stack = this.inventory.selectedStack;
+    this.cooldown = (stack && ITEMS[stack.id].attackCooldown) || ATTACK_COOLDOWN;
+    this.player.swing();
     const damage = (stack && ITEMS[stack.id].damage) || PUNCH_DAMAGE;
     const { x, z } = this.player.position;
     if (this.world.livestock.hit(animal, damage, x, z)) {
@@ -263,6 +309,25 @@ export class Interaction {
     const { x, z } = this.player.position;
     const f = this.player.facing;
     return this.world.chests.findTarget(x, z, f.x, f.z);
+  }
+
+  /** The wild (untamed) wolf the player is facing within reach, or null. */
+  private facedWildWolf(): Wolf | null {
+    const { x, z } = this.player.position;
+    const f = this.player.facing;
+    const wolf = this.world.wolves.findTarget(x, z, f.x, f.z, ANIMAL_REACH, ANIMAL_AIM_MIN_DOT);
+    return wolf && !wolf.tamed ? wolf : null;
+  }
+
+  /** Feed one raw meat to a wild wolf; tames it after WOLF_TAME_MEAT feedings. */
+  private feedWolf(wolf: Wolf): void {
+    this.cooldown = EAT_COOLDOWN;
+    if (!this.inventory.removeFromSlot(this.inventory.selected, 1)) return;
+    if (this.world.wolves.feed(wolf)) {
+      this.hud.toast('The wolf is tamed! It will follow and protect you.', 4000);
+    } else {
+      this.hud.toast(`The wolf eats the meat (${wolf.fed}/${WOLF_TAME_MEAT})`, 2000);
+    }
   }
 
   /** Open the faced chest: it drops its loot via DroppedItems and shows as opened. */

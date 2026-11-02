@@ -18,6 +18,8 @@ import {
 import { Chests } from '../entities/Chests';
 import { Livestock } from '../entities/Livestock';
 import { Monsters } from '../entities/Monsters';
+import { Rocks } from '../entities/Rocks';
+import { Wolves } from '../entities/Wolves';
 import type { PlayerStats } from '../player/Stats';
 import { toon } from '../render/materials';
 import { textures } from '../render/textures';
@@ -48,6 +50,8 @@ export class World {
   readonly livestock: Livestock;
   readonly monsters: Monsters;
   readonly chests: Chests;
+  readonly rocks: Rocks;
+  readonly wolves: Wolves;
   /** Set by Game so night monsters can damage the player. */
   stats: PlayerStats | null = null;
   private readonly sky: Sky;
@@ -98,6 +102,13 @@ export class World {
 
     this.chests = new Chests(this);
     this.scene.add(this.chests.group);
+
+    this.rocks = new Rocks(this);
+    this.scene.add(this.rocks.group);
+
+    // Wolves after monsters + livestock, so the host references they hunt/defend exist.
+    this.wolves = new Wolves(this);
+    this.scene.add(this.wolves.group);
   }
 
   /** True only during the in-game night (hook for night monster spawns). */
@@ -186,5 +197,7 @@ export class World {
     this.livestock.update(dt, focus.x, focus.z);
     if (this.stats) this.monsters.update(dt, focus.x, focus.z, this.stats);
     this.chests.update(dt);
+    this.rocks.update(dt, focus.x, focus.z);
+    this.wolves.update(dt, focus.x, focus.z);
   }
 }

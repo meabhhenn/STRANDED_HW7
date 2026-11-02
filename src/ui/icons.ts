@@ -31,6 +31,10 @@ const PALETTE: Record<string, string> = {
   z: '#f2ece0', // gauze / white
   Z: '#d9423e', // medical red
   m: '#4a4f57', // iron / dark trim
+  o: '#7f868d', // ore stone
+  O: '#d8b25a', // ore vein (brassy)
+  n: '#cfd4d8', // steel / blade
+  u: '#26292e', // gunmetal dark
 };
 
 const ICONS: Record<ItemId, string[]> = {
@@ -130,6 +134,48 @@ const ICONS: Record<ItemId, string[]> = {
     '.kzzzzzzzzk.',
     '.kmmmmmmmmk.',
     '..kkkkkkkk..',
+    '............',
+  ],
+  metal_ore: [
+    '............',
+    '............',
+    '...kkkk.....',
+    '..koooOkk...',
+    '.kooOoookk..',
+    '.koooooOok..',
+    'kooOooooook.',
+    'kooooOooook.',
+    '.kooooooook.',
+    '..kkkkkkkk..',
+    '............',
+    '............',
+  ],
+  iron_spear: [
+    '..........kk',
+    '.........knk',
+    '........knnk',
+    '.......knnk.',
+    '......kmmk..',
+    '.....kbbk...',
+    '....kbbk....',
+    '...kbbk.....',
+    '..kbbk......',
+    '.kbbk.......',
+    'kbk.........',
+    'kk..........',
+  ],
+  gun: [
+    '............',
+    '............',
+    '....kkkkkkkk',
+    '...kuuuuuuuk',
+    'kkkmmmmmk...',
+    'kuuuuuuk....',
+    'kkbbkkmk....',
+    '..kbbk......',
+    '..kbbk......',
+    '..kkk.......',
+    '............',
     '............',
   ],
   cooked_meat: [], // derived from raw_meat below

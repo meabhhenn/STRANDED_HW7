@@ -1,5 +1,10 @@
 import * as THREE from 'three';
 import {
+  GUN_ATTACK_COOLDOWN,
+  GUN_DAMAGE,
+  GUN_REACH,
+  IRON_SPEAR_CHOP_POWER,
+  IRON_SPEAR_DAMAGE,
   SPEAR_CHOP_POWER,
   SPEAR_DAMAGE,
   STONE_AXE_CHOP_POWER,
@@ -10,9 +15,12 @@ import {
   createAxe,
   createBandage,
   createFeather,
+  createGun,
   createHide,
+  createIronSpear,
   createLog,
   createMedkit,
+  createOreNugget,
   createSpear,
   createSteak,
   createStoneAxe,
@@ -31,7 +39,10 @@ export type ItemId =
   | 'wool'
   | 'feather'
   | 'bandage'
-  | 'medkit';
+  | 'medkit'
+  | 'metal_ore'
+  | 'iron_spear'
+  | 'gun';
 
 export interface ItemDef {
   id: ItemId;
@@ -45,6 +56,13 @@ export interface ItemDef {
   heal?: number;
   /** Damage dealt per hit when this is the selected item (default: fists, PUNCH_DAMAGE). */
   damage?: number;
+  /**
+   * Attack reach (metres) when this item is selected. Lets ranged weapons (the
+   * gun) hit from farther than melee; default is the melee ANIMAL_REACH.
+   */
+  reach?: number;
+  /** Seconds between attacks with this item (default: ATTACK_COOLDOWN). */
+  attackCooldown?: number;
   /**
    * Tree damage per hit when selected (default: bare hands, PUNCH_CHOP_POWER).
    * Trees have TREE_HITS hit points, so power 2 fells one in 3 hits.
@@ -121,6 +139,42 @@ export const ITEMS: Record<ItemId, ItemDef> = {
       return g;
     },
   },
+  iron_spear: {
+    id: 'iron_spear',
+    name: 'Iron Spear',
+    maxStack: 1,
+    color: '#cfd4d8',
+    damage: IRON_SPEAR_DAMAGE,
+    chopPower: IRON_SPEAR_CHOP_POWER,
+    createHeldMesh: () => createIronSpear(),
+    createMesh() {
+      // Lying flat on the ground.
+      const g = new THREE.Group();
+      const spear = createIronSpear();
+      spear.rotation.x = Math.PI / 2;
+      spear.position.y = 0.07;
+      g.add(spear);
+      return g;
+    },
+  },
+  gun: {
+    id: 'gun',
+    name: 'Gun',
+    maxStack: 1,
+    color: '#40454c',
+    damage: GUN_DAMAGE,
+    reach: GUN_REACH,
+    attackCooldown: GUN_ATTACK_COOLDOWN,
+    createHeldMesh: () => createGun(),
+    createMesh() {
+      // Lying flat on the ground.
+      const g = new THREE.Group();
+      const gun = createGun();
+      gun.position.y = 0.1;
+      g.add(gun);
+      return g;
+    },
+  },
   log: {
     id: 'log',
     name: 'Log',
@@ -176,6 +230,13 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     maxStack: 50,
     color: '#dfe9f2',
     createMesh: (count) => arrange(count, 3, 0.12, () => createFeather()),
+  },
+  metal_ore: {
+    id: 'metal_ore',
+    name: 'Metal Ore',
+    maxStack: 50,
+    color: '#9a8f7a',
+    createMesh: (count) => arrange(count, 3, 0.16, () => createOreNugget()),
   },
   bandage: {
     id: 'bandage',
