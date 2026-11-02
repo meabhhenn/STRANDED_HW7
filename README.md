@@ -1,6 +1,6 @@
 # STRANDED
 
-Original design and foundation by Izzy (izzyh-gif). Phase 2 extended by Meabh Hennessy.
+Original design and foundation by Izzy (izzyh-gif). Phase 2 extended by Meabh.
 
 A 3D island survival game: survive 50 nights after a plane crash. Built with TypeScript, Three.js and Vite. The full design is in [SPEC.md](SPEC.md). Current progress and future steps are described in [docs/ROADMAP.md](docs/ROADMAP.md).
 
